@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerador de Labirinto para Seguidor de Linha</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.cdnjs.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .monospace {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .title-gradient {
+            background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .custom-range {
+            @apply appearance-none w-full h-3 rounded-lg;
+            background: linear-gradient(to right, #3b82f6 0%, #60a5fa 100%);
+        }
+        .custom-range::-webkit-slider-thumb {
+            @apply appearance-none w-5 h-5 rounded-full bg-white cursor-pointer;
+            border: 2px solid #3b82f6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .canvas-container {
+            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3C/g%3E%3C/svg%3E");
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .animate-gradient {
+            background: linear-gradient(-45deg, #10B981, #3B82F6, #2563EB);
+            background-size: 200% 200%;
+            animation: gradient 5s ease infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto space-y-8">
+        <!-- Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-5xl font-bold title-gradient tracking-tight">
+                Gerador de Labirinto
+            </h1>
+            <p class="text-xl text-gray-600 font-light tracking-wide">
+                Para Robôs Seguidores de Linha
+            </p>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="card rounded-2xl p-8 shadow-2xl space-y-8">
+            <div class="space-y-6">
+                <!-- Grid Size Control -->
+                <div>
+                    <label class="flex items-center justify-between mb-3">
+                        <span class="text-gray-700 font-medium tracking-wide">
+                            Tamanho da Grade
+                        </span>
+                        <span id="sizeValue" class="monospace text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                            6 x 6
+                        </span>
+                    </label>
+                    <input 
+                        type="range" 
+                        id="size" 
+                        min="4" 
+                        max="10" 
+                        value="6" 
+                        step="2"
+                        class="custom-range"
+                    >
+                </div>
+
+                <!-- Line Width Control -->
+                <div>
+                    <label class="flex items-center justify-between mb-3">
+                        <span class="text-gray-700 font-medium tracking-wide">
+                            Espessura da Linha
+                        </span>
+                        <span id="lineWidthValue" class="monospace text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                            20px
+                        </span>
+                    </label>
+                    <input 
+                        type="range" 
+                        id="lineWidth" 
+                        min="10" 
+                        max="30" 
+                        value="20" 
+                        step="2"
+                        class="custom-range"
+                    >
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <button 
+                onclick="generateMaze()"
+                class="w-full py-4 px-6 animate-gradient text-white font-semibold rounded-xl
+                       shadow-lg transform transition-all duration-300 hover:scale-105
+                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+                Gerar Novo Percurso
+            </button>
+        </div>
+
+        <!-- Canvas Card -->
+        <div class="card rounded-2xl p-6 shadow-2xl canvas-container">
+            <canvas 
+                id="mazeCanvas" 
+                width="800" 
+                height="800"
+                class="w-full max-w-3xl mx-auto bg-white rounded-lg"
+            ></canvas>
+        </div>
+
+        <!-- Info Card -->
+        <div class="glass-effect rounded-2xl p-8 space-y-4">
+            <h3 class="text-xl font-semibold text-blue-900 tracking-wide border-b border-blue-100 pb-2">
+                Instruções de Uso
+            </h3>
+            <ul class="space-y-3 text-gray-700">
+                <li class="flex items-center">
+                    <span class="h-2 w-2 rounded-full bg-blue-500 mr-3"></span>
+                    <span class="leading-relaxed">Ajuste o tamanho da grade para modificar a complexidade do labirinto</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="h-2 w-2 rounded-full bg-blue-500 mr-3"></span>
+                    <span class="leading-relaxed">Configure a espessura da linha de acordo com seus sensores</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="h-2 w-2 rounded-full bg-blue-500 mr-3"></span>
+                    <span class="leading-relaxed">O ponto verde marca o início e o vermelho o fim do percurso</span>
+                </li>
+                <li class="flex items-center">
+                    <span class="h-2 w-2 rounded-full bg-blue-500 mr-3"></span>
+                    <span class="leading-relaxed">Todas as curvas são em 90 graus para facilitar a navegação do robô</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // [O código JavaScript permanece o mesmo do exemplo anterior]
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const sizeSlider = document.getElementById('size');
+        const sizeValue = document.getElementById('sizeValue');
+        const lineWidthSlider = document.getElementById('lineWidth');
+        const lineWidthValue = document.getElementById('lineWidthValue');
+
+        sizeSlider.addEventListener('input', function() {
+            sizeValue.textContent = `${this.value} x ${this.value}`;
+        });
+
+        lineWidthSlider.addEventListener('input', function() {
+            lineWidthValue.textContent = `${this.value}px`;
+        });
+
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.visited = false;
+                this.walls = {
+                    top: true,
+                    right: true,
+                    bottom: true,
+                    left: true
+                };
+            }
+        }
+
+        function createMaze(size) {
+            const maze = Array(size).fill().map((_, y) => 
+                Array(size).fill().map((_, x) => new Cell(x, y))
+            );
+
+            function getNeighbors(cell) {
+                const neighbors = [];
+                const dirs = [
+                    [0, -1, 'top'],
+                    [1, 0, 'right'],
+                    [0, 1, 'bottom'],
+                    [-1, 0, 'left']
+                ];
+
+                for (const [dx, dy, dir] of dirs) {
+                    const newX = cell.x + dx;
+                    const newY = cell.y + dy;
+
+                    if (newX >= 0 && newX < size && newY >= 0 && newY < size && 
+                        !maze[newY][newX].visited) {
+                        neighbors.push({cell: maze[newY][newX], dir: dir});
+                    }
+                }
+                return neighbors;
+            }
+
+            function removeWall(current, next, dir) {
+                current.walls[dir] = false;
+                const opposites = {
+                    'top': 'bottom',
+                    'right': 'left',
+                    'bottom': 'top',
+                    'left': 'right'
+                };
+                next.walls[opposites[dir]] = false;
+            }
+
+            function generatePath(cell) {
+                cell.visited = true;
+                const neighbors = getNeighbors(cell);
+                
+                for (let i = neighbors.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [neighbors[i], neighbors[j]] = [neighbors[j], neighbors[i]];
+                }
+
+                for (const {cell: next, dir} of neighbors) {
+                    if (!next.visited) {
+                        removeWall(cell, next, dir);
+                        generatePath(next);
+                    }
+                }
+            }
+
+            generatePath(maze[0][0]);
+            return maze;
+        }
+
+        function drawMaze(maze) {
+            const size = maze.length;
+            const cellSize = (canvas.width - 100) / size;
+            const lineWidth = parseInt(lineWidthSlider.value);
+            const margin = 50;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = lineWidth;
+            ctx.strokeStyle = '#000';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            function drawPath() {
+                const path = [];
+                let current = {x: 0, y: 0};
+                const visited = new Set();
+
+                function visit(x, y) {
+                    const key = `${x},${y}`;
+                    if (visited.has(key)) return;
+                    visited.add(key);
+
+                    const cell = maze[y][x];
+                    const directions = [
+                        {dx: 0, dy: -1, wall: 'top'},
+                        {dx: 1, dy: 0, wall: 'right'},
+                        {dx: 0, dy: 1, wall: 'bottom'},
+                        {dx: -1, dy: 0, wall: 'left'}
+                    ];
+
+                    for (const {dx, dy, wall} of directions) {
+                        const newX = x + dx;
+                        const newY = y + dy;
+                        if (newX >= 0 && newX < size && newY >= 0 && newY < size && !cell.walls[wall]) {
+                            path.push({
+                                x1: (x + 0.5) * cellSize + margin,
+                                y1: (y + 0.5) * cellSize + margin,
+                                x2: (newX + 0.5) * cellSize + margin,
+                                y2: (newY + 0.5) * cellSize + margin
+                            });
+                            visit(newX, newY);
+                        }
+                    }
+                }
+
+                visit(0, 0);
+                return path;
+            }
+
+            const path = drawPath();
+            ctx.beginPath();
+            for (const {x1, y1, x2, y2} of path) {
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+            }
+            ctx.stroke();
+
+            const startX = margin + cellSize/2;
+            const startY = margin + cellSize/2;
+            const endX = margin + (size-0.5)*cellSize;
+            const endY = margin + (size-0.5)*cellSize;
+
+            ctx.fillStyle = '#10B981'; // Tailwind green-500
+            ctx.beginPath();
+            ctx.arc(startX, startY, lineWidth/2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#EF4444'; // Tailwind red-500
+            ctx.beginPath();
+            ctx.arc(endX, endY, lineWidth/2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function generateMaze() {
+            const size = parseInt(sizeSlider.value);
+            const maze = createMaze(size);
+            drawMaze(maze);
+        }
+
+        generateMaze();
+    </script>
+</body>
+</html>
